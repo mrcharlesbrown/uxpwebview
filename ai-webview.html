@@ -1,48 +1,42 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>AI WebView</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      padding: 20px;
-      background: #f5f5f5;
-    }
-    .log {
-      white-space: pre-wrap;
-      background: #fff;
-      padding: 10px;
-      border-radius: 6px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    }
-  </style>
+  <meta charset="UTF-8">
+  <title>AI Webview</title>
 </head>
 <body>
-  <h2>AI WebView Active</h2>
-  <p><strong>Last received prompt:</strong></p>
-  <div id="prompt" class="log">Waiting for prompt...</div>
-
   <script>
     window.addEventListener("message", async (event) => {
-      const { type, prompt } = event.data;
+      const { type, prompt, apiKey } = event.data;
 
-      if (type === "ask-ai" && prompt) {
-        document.getElementById("prompt").textContent = prompt;
+      if (type === "ask-ai" && prompt && apiKey) {
+        try {
+          const res = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+              model: "gpt-3.5-turbo",
+              messages: [{ role: "user", content: prompt }],
+              temperature: 0.7
+            })
+          });
 
-        // Simulated AI response (replace this with actual API later)
-        const simulatedResponse = `🤖 AI says: You said "${prompt}"`;
+          const json = await res.json();
 
-        // Send response back to host plugin
-        parent.postMessage({
-          type: "ai-response",
-          response: simulatedResponse
-        }, "*");
+          if (json.choices && json.choices.length > 0) {
+            parent.postMessage({ type: "ai-response", response: json.choices[0].message.content }, "*");
+          } else {
+            parent.postMessage({ type: "ai-error", error: JSON.stringify(json) }, "*");
+          }
+
+        } catch (err) {
+          parent.postMessage({ type: "ai-error", error: err.message }, "*");
+        }
       }
     });
-
-    // Optional: Notify host that webview is ready
-    parent.postMessage({ type: "ready" }, "*");
   </script>
 </body>
 </html>
