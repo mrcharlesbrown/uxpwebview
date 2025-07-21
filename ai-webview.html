@@ -94,6 +94,22 @@
                 No response yet
             </div>
         </div>
+
+		<!-- Add this to your ai-webview.html -->
+		<div id="debugConsole" style="
+			margin-top: 20px;
+			padding: 10px;
+			background: #f0f0f0;
+			border: 1px solid #ddd;
+			border-radius: 4px;
+			max-height: 150px;
+			overflow-y: auto;
+			font-family: monospace;
+			font-size: 12px;
+		">
+			<div>Debug Console:</div>
+			<div id="debugLog"></div>
+		</div>
     </div>
 
     <script>
@@ -107,11 +123,25 @@
             statusElement.textContent = message;
             statusElement.className = `status ${type}`;
         }
-        
+
+		// Add this function to ai-webview.html
+		function logDebug(message) {
+			const debugLog = document.getElementById('debugLog');
+			const entry = document.createElement('div');
+			entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+			debugLog.appendChild(entry);
+			debugLog.scrollTop = debugLog.scrollHeight;
+		}
+
         // Handle messages from the Photoshop plugin
         window.addEventListener('message', async (event) => {
+            logDebug(`Received message: ${JSON.stringify(event.data)}`);
+            console.log("WebView received message:", event.data);
+
             // Verify the message structure
             if (event.data && event.data.type === 'ai-request') {
+                console.log("Processing AI request with prompt:", event.data.prompt);
+
                 currentApiKey = event.data.apiKey;
                 currentPrompt = event.data.prompt;
                 
@@ -149,6 +179,7 @@
                     }, '*');
                     
                 } catch (error) {
+                        logDebug(`Full error: ${error.stack}`);
                     console.error('AI request failed:', error);
                     document.getElementById('responseArea').textContent = `Error: ${error.message}`;
                     updateStatus(`Error: ${error.message}`, 'error');
@@ -164,36 +195,54 @@
         
         // Function to call OpenAI API
         async function callOpenAI(prompt, apiKey) {
-            updateStatus('Calling OpenAI API...', 'processing');
-            
-            const endpoint = 'https://api.openai.com/v1/chat/completions';
-            const model = 'gpt-3.5-turbo'; // or 'gpt-4'
-            
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
-                },
-                body: JSON.stringify({
-                    model: model,
-                    messages: [
-                        {
-                            role: 'user',
-                            content: prompt
-                        }
-                    ],
-                    temperature: 0.7
-                })
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error?.message || 'Failed to call OpenAI API');
+            try {
+                  logDebug(`Starting OpenAI API call with prompt: ${prompt.substring(0, 50)}...`);
+                  console.log("Initiating OpenAI API call with prompt:", prompt);
+                  updateStatus('Calling OpenAI API...', 'processing');
+                  
+                  const endpoint = 'https://api.openai.com/v1/chat/completions';
+                  const model = 'gpt-3.5-turbo'; // or 'gpt-4'
+
+                  const controller = new AbortController();
+                  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+                  
+                  const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${apiKey}`
+                        },
+                        body: JSON.stringify({
+                              model: model,
+                              messages: [
+                                    {
+                                    role: 'user',
+                                    content: prompt
+                                    }
+                              ],
+                              temperature: 0.7
+                        }),
+                        signal: controller.signal
+                  });
+                  
+                  const endTime = Date.now();
+                  logDebug(`API call completed in ${endTime - startTime}ms`);
+                  
+                  if (!response.ok) {
+                        logDebug(`API error: ${response.status} ${response.statusText}`);
+                  const errorData = await response.json();
+                  throw new Error(errorData.error?.message || 'Failed to call OpenAI API');
+                  }
+
+                  clearTimeout(timeoutId);
+                  const data = await response.json();
+                  logDebug("Received API response");
+                  return data.choices[0]?.message?.content || 'No response content';
+            } catch (error) {
+                  clearTimeout(timeoutId);
+                  logDebug(`Request failed or timed out: ${error.message}`);
+                  throw new Error(`Request timed out after 30 seconds: ${error.message}`);
             }
-            
-            const data = await response.json();
-            return data.choices[0]?.message?.content || 'No response content';
         }
         
         // Function to call Google Gemini API
