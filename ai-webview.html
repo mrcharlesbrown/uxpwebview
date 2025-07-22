@@ -1,36 +1,71 @@
-<script>
-window.onmessage = async (event) => {
-    if (event.origin !== "file://") return; // UXP-specific origin
-    
-    try {
-        const { type, apiKey, prompt } = JSON.parse(event.data);
-        if (type !== "generate") return;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI WebView</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #282c34;
+            color: white;
+            padding: 15px;
+            margin: 0;
+            text-align: center;
+        }
+        #status {
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <div id="status">Waiting for prompt from Photoshop...</div>
+    <script>
+        const statusEl = document.getElementById('status');
 
-        // Add your AI API integration code here
-        // Example using OpenAI:
-        const response = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${apiKey}`
-            },
-            body: JSON.stringify({
-                model: "gpt-3.5-turbo",
-                messages: [{ role: "user", content: prompt }]
-            })
-        });
+        // Listen for messages from the UXP plugin
+        window.onmessage = async (event) => {
+            // Basic security check: ensure the message is from the expected origin (uxp-plugin)
+            if (event.origin !== "uxp-plugin://com.example.uxpwebviewai") {
+                 statusEl.textContent = `Message rejected from unknown origin: ${event.origin}`;
+                 return;
+            }
 
-        const data = await response.json();
-        const result = data.choices[0].message.content;
-        
-        // Send response back to plugin
-        window.parent.postMessage(JSON.stringify({
-            type: "aiResponse",
-            content: result
-        }), "*");
-        
-    } catch (error) {
-        console.error("AI processing failed:", error);
-    }
-};
-</script>
+            const { apiKey, prompt } = event.data;
+            statusEl.textContent = "Received prompt. Contacting OpenAI API...";
+
+            try {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: "gpt-3.5-turbo",
+                        messages: [{ role: "user", content: prompt }],
+                        max_tokens: 150
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                const result = data.choices[0].message.content;
+
+                statusEl.innerHTML = `<strong>Response:</strong><br>${result}`;
+
+                // Send the result back to the UXP plugin
+                window.parent.postMessage(data, "uxp-plugin://com.example.uxpwebviewai");
+
+            } catch (error) {
+                statusEl.textContent = `Error: ${error.message}`;
+                console.error('API call failed:', error);
+                // Optionally send error details back to the plugin
+                window.parent.postMessage({ error: error.message }, "uxp-plugin://com.example.uxpwebviewai");
+            }
+        };
+    </script>
+</body>
+</html>
