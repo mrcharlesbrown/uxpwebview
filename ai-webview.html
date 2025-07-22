@@ -3,614 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI WebView Interface</title>
+    <title>AI Webview Content</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: sans-serif;
+            margin: 15px;
+            background-color: #f8f8f8;
             color: #333;
-            min-height: 100vh;
-            padding: 20px;
             display: flex;
             flex-direction: column;
+            height: calc(100vh - 30px); /* Account for margin */
         }
-
-        .container {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 24px;
-            padding-bottom: 16px;
-            border-bottom: 2px solid #e0e0e0;
-        }
-
-        .header h1 {
-            font-size: 24px;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 8px;
-        }
-
-        .header p {
-            color: #666;
-            font-size: 14px;
-        }
-
-        .status {
-            background: #f0f8ff;
-            border: 1px solid #b3d9ff;
-            border-radius: 8px;
-            padding: 12px 16px;
-            margin-bottom: 20px;
-            font-size: 14px;
-            color: #0066cc;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .status.ready {
-            background: #f0fff0;
-            border-color: #90ee90;
-            color: #008000;
-        }
-
-        .status.processing {
-            background: #fff8e1;
-            border-color: #ffcc02;
-            color: #f57c00;
-        }
-
-        .status.error {
-            background: #fff0f0;
-            border-color: #ffb3b3;
-            color: #cc0000;
-        }
-
-        .loading-spinner {
-            width: 16px;
-            height: 16px;
-            border: 2px solid #ccc;
-            border-top: 2px solid #0066cc;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .request-info {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 16px;
-            border: 1px solid #e9ecef;
-        }
-
-        .request-info h3 {
-            font-size: 16px;
-            margin-bottom: 12px;
-            color: #333;
-        }
-
-        .info-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-            padding: 6px 0;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .info-item:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
-        }
-
-        .info-label {
-            font-weight: 500;
+        h2 {
             color: #555;
-            font-size: 13px;
+            margin-top: 0;
+            font-size: 1.2em;
         }
-
-        .info-value {
-            font-size: 13px;
-            color: #777;
-            max-width: 200px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .response-area {
-            flex: 1;
-            min-height: 200px;
-        }
-
-        .response-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-
-        .response-header h3 {
-            font-size: 16px;
-            color: #333;
-        }
-
-        .response-time {
-            font-size: 12px;
-            color: #888;
-            font-weight: normal;
-        }
-
-        .response-content {
-            background: #fff;
+        #aiOutput {
+            background-color: #fff;
             border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 16px;
+            padding: 15px;
+            border-radius: 5px;
             min-height: 150px;
-            max-height: 300px;
             overflow-y: auto;
-            font-size: 14px;
-            line-height: 1.6;
             white-space: pre-wrap;
-            word-wrap: break-word;
+            word-break: break-word;
+            flex-grow: 1; /* Allows output area to fill available space */
         }
-
-        .response-content.empty {
-            color: #999;
+        .status-message {
             font-style: italic;
-            text-align: center;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .service-badge {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 500;
-            text-transform: uppercase;
-            color: white;
-        }
-
-        .service-badge.openai {
-            background: #00a67e;
-        }
-
-        .service-badge.gemini {
-            background: #4285f4;
-        }
-
-        .service-badge.stability {
-            background: #8b5cf6;
-        }
-
-        .debug-info {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 6px;
-            padding: 12px;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
             color: #666;
-            margin-top: 16px;
-            max-height: 100px;
-            overflow-y: auto;
+            margin-bottom: 10px;
         }
-
         .error-message {
-            background: #fff5f5;
-            border: 1px solid #feb2b2;
-            border-radius: 8px;
-            padding: 16px;
-            color: #c53030;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-
-        .retry-button {
-            background: #0066cc;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 13px;
-            cursor: pointer;
-            margin-top: 12px;
-        }
-
-        .retry-button:hover {
-            background: #0052a3;
-        }
-
-        .typing-indicator {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: #666;
-            font-size: 14px;
-            margin: 12px 0;
-        }
-
-        .typing-dots {
-            display: flex;
-            gap: 4px;
-        }
-
-        .typing-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #666;
-            animation: bounce 1.4s infinite ease-in-out;
-        }
-
-        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
-        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
-
-        @keyframes bounce {
-            0%, 80%, 100% {
-                transform: scale(0.8);
-                opacity: 0.5;
-            }
-            40% {
-                transform: scale(1);
-                opacity: 1;
-            }
+            color: red;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🤖 AI WebView Interface</h1>
-            <p>Ready to receive requests from UXP Plugin</p>
-        </div>
-
-        <div id="status" class="status ready">
-            ✅ WebView loaded and ready for communication
-        </div>
-
-        <div class="content">
-            <div class="request-info" id="requestInfo" style="display: none;">
-                <h3>📥 Current Request</h3>
-                <div class="info-item">
-                    <span class="info-label">Service:</span>
-                    <span id="currentService" class="info-value">-</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Prompt:</span>
-                    <span id="currentPrompt" class="info-value">-</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">API Key:</span>
-                    <span id="currentApiKey" class="info-value">-</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Status:</span>
-                    <span id="requestStatus" class="info-value">-</span>
-                </div>
-            </div>
-
-            <div class="response-area">
-                <div class="response-header">
-                    <h3>💬 AI Response</h3>
-                    <span id="responseTime" class="response-time"></span>
-                </div>
-                <div id="responseContent" class="response-content empty">
-                    Waiting for AI request...
-                </div>
-                <div id="typingIndicator" class="typing-indicator" style="display: none;">
-                    <span>AI is thinking</span>
-                    <div class="typing-dots">
-                        <div class="typing-dot"></div>
-                        <div class="typing-dot"></div>
-                        <div class="typing-dot"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="debugInfo" class="debug-info">
-                Ready to receive messages via postMessage API
-            </div>
-        </div>
-    </div>
+    <h2>AI Webview Content</h2>
+    <div id="aiOutput" class="status-message">Waiting for prompt from plugin...</div>
 
     <script>
-        // Global state
-        let currentRequest = null;
-        let requestStartTime = null;
+        const aiOutput = document.getElementById('aiOutput');
 
-        // DOM elements
-        const statusEl = document.getElementById('status');
-        const requestInfoEl = document.getElementById('requestInfo');
-        const currentServiceEl = document.getElementById('currentService');
-        const currentPromptEl = document.getElementById('currentPrompt');
-        const currentApiKeyEl = document.getElementById('currentApiKey');
-        const requestStatusEl = document.getElementById('requestStatus');
-        const responseContentEl = document.getElementById('responseContent');
-        const responseTimeEl = document.getElementById('responseTime');
-        const debugInfoEl = document.getElementById('debugInfo');
-        const typingIndicatorEl = document.getElementById('typingIndicator');
-
-        // Utility functions
-        function updateStatus(message, type = 'ready') {
-            statusEl.textContent = message;
-            statusEl.className = `status ${type}`;
-            
-            if (type === 'processing') {
-                statusEl.innerHTML = `<div class="loading-spinner"></div> ${message}`;
-            }
+        // Function to send message back to UXP plugin
+        function sendResponseToParent(type, data, error = null) {
+            // Using '*' as target origin for simplicity.
+            // In a real-world scenario, you might try to determine the UXP plugin's origin,
+            // but for a UXP plugin's internal webview, '*' is commonly used.
+            window.parent.postMessage({ type, result: data, error }, '*');
         }
 
-        function debugLog(message) {
-            const timestamp = new Date().toLocaleTimeString();
-            debugInfoEl.textContent = `[${timestamp}] ${message}`;
-            console.log(`[AI-WebView] ${message}`);
-        }
+        // Listen for messages from the UXP plugin
+        window.addEventListener('message', async (event) => {
+            console.log("Webview received message:", event.data);
 
-        function showTypingIndicator() {
-            typingIndicatorEl.style.display = 'flex';
-            responseContentEl.classList.add('empty');
-            responseContentEl.textContent = '';
-        }
+            // Ensure the message comes from the expected origin (your UXP plugin)
+            // Note: UXP plugin origins are not standard HTTP/HTTPS.
+            // For internal webview communication, checking event.data.type is more common.
+            // if (event.origin !== "uxp://uxp/plugin/com.example.aiapp_webview") { // Example origin, not always reliable for postMessage
+            //    console.warn("Message from unexpected origin:", event.origin);
+            //    return;
+            // }
 
-        function hideTypingIndicator() {
-            typingIndicatorEl.style.display = 'none';
-        }
+            if (event.data && event.data.type === "promptRequest") {
+                const { prompt, apiKey } = event.data;
 
-        function displayResponse(response, isError = false) {
-            hideTypingIndicator();
-            responseContentEl.classList.remove('empty');
-            responseContentEl.textContent = response;
-            responseContentEl.style.color = isError ? '#cc0000' : '#333';
-            
-            if (requestStartTime) {
-                const duration = Date.now() - requestStartTime;
-                responseTimeEl.textContent = `Response time: ${duration}ms`;
-            }
-        }
-
-        function updateRequestInfo(data) {
-            requestInfoEl.style.display = 'block';
-            
-            // Add service badge
-            const serviceBadge = `<span class="service-badge ${data.service}">${data.service.toUpperCase()}</span>`;
-            currentServiceEl.innerHTML = serviceBadge;
-            
-            currentPromptEl.textContent = data.prompt.length > 50 ? 
-                data.prompt.substring(0, 50) + '...' : data.prompt;
-            
-            currentApiKeyEl.textContent = data.apiKey ? 
-                `***${data.apiKey.slice(-4)}` : 'Not provided';
-            
-            requestStatusEl.textContent = 'Processing...';
-        }
-
-        // AI API functions
-        async function callOpenAI(prompt, apiKey) {
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
-                },
-                body: JSON.stringify({
-                    model: 'gpt-3.5-turbo',
-                    messages: [
-                        {
-                            role: 'user',
-                            content: prompt
-                        }
-                    ],
-                    max_tokens: 500,
-                    temperature: 0.7
-                })
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error?.message || `HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            const data = await response.json();
-            return data.choices[0]?.message?.content || 'No response generated';
-        }
-
-        async function callGemini(prompt, apiKey) {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [{
-                            text: prompt
-                        }]
-                    }],
-                    generationConfig: {
-                        maxOutputTokens: 500,
-                        temperature: 0.7
-                    }
-                })
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error?.message || `HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            const data = await response.json();
-            return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated';
-        }
-
-        async function callStabilityAI(prompt, apiKey) {
-            // Note: Stability AI is primarily for image generation
-            // This is a placeholder implementation
-            return `Stability AI integration would generate images based on: "${prompt}". This is a text-only demo response.`;
-        }
-
-        // Main AI request handler
-        async function handleAIRequest(data) {
-            try {
-                debugLog(`Processing ${data.service.toUpperCase()} request`);
-                updateRequestInfo(data);
-                updateStatus(`Processing request via ${data.service.toUpperCase()}...`, 'processing');
-                showTypingIndicator();
-                
-                currentRequest = data;
-                requestStartTime = Date.now();
-
-                let response;
-                
-                switch (data.service) {
-                    case 'openai':
-                        response = await callOpenAI(data.prompt, data.apiKey);
-                        break;
-                    case 'gemini':
-                        response = await callGemini(data.prompt, data.apiKey);
-                        break;
-                    case 'stability':
-                        response = await callStabilityAI(data.prompt, data.apiKey);
-                        break;
-                    default:
-                        throw new Error(`Unsupported AI service: ${data.service}`);
+                if (!prompt || !apiKey) {
+                    aiOutput.textContent = "Error: Prompt or API Key missing from plugin.";
+                    sendResponseToParent("aiResponse", null, "Prompt or API Key missing.");
+                    return;
                 }
 
-                displayResponse(response);
-                requestStatusEl.textContent = 'Completed';
-                updateStatus(`✅ Response received from ${data.service.toUpperCase()}`, 'ready');
-                
-                // Send response back to UXP plugin
-                if (window.parent && window.parent.postMessage) {
-                    window.parent.postMessage({
-                        type: 'ai-response',
-                        response: response,
-                        service: data.service,
-                        success: true,
-                        timestamp: Date.now()
-                    }, '*');
-                    debugLog('Response sent back to UXP plugin');
-                }
+                aiOutput.textContent = "Generating response... Please wait.";
+                aiOutput.classList.remove('error-message');
+                aiOutput.classList.remove('status-message');
 
-            } catch (error) {
-                console.error('AI request error:', error);
-                const errorMessage = error.message || 'Unknown error occurred';
-                
-                displayResponse(`Error: ${errorMessage}`, true);
-                requestStatusEl.textContent = 'Failed';
-                updateStatus(`❌ Error: ${errorMessage}`, 'error');
-                
-                // Send error back to UXP plugin
-                if (window.parent && window.parent.postMessage) {
-                    window.parent.postMessage({
-                        type: 'ai-response',
-                        response: errorMessage,
-                        service: data.service,
-                        success: false,
-                        error: true,
-                        timestamp: Date.now()
-                    }, '*');
-                    debugLog('Error sent back to UXP plugin');
-                }
-            }
-        }
+                try {
+                    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey}`
+                        },
+                        body: JSON.stringify({
+                            model: "gpt-3.5-turbo", // You can change this model
+                            messages: [{ role: "user", content: prompt }],
+                            max_tokens: 500
+                        })
+                    });
 
-        // Message listener for communication with UXP plugin
-        window.addEventListener('message', function(event) {
-            debugLog(`Received message: ${JSON.stringify(event.data)}`);
-
-            if (!event.data || typeof event.data !== 'object') {
-                debugLog('Invalid message format received');
-                return;
-            }
-
-            const { type, ...data } = event.data;
-
-            switch (type) {
-                case 'init':
-                    debugLog('WebView initialized by UXP plugin');
-                    updateStatus('✅ Connected to UXP plugin', 'ready');
-                    // Send confirmation back to plugin
-                    if (window.parent && window.parent.postMessage) {
-                        window.parent.postMessage({
-                            type: 'status',
-                            message: 'WebView connected and ready'
-                        }, '*');
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorData.error.message || 'Unknown error'}`);
                     }
-                    break;
 
-                case 'ai-request':
-                    if (!data.prompt || !data.apiKey || !data.service) {
-                        debugLog('Missing required fields in AI request');
-                        updateStatus('❌ Invalid request: missing required fields', 'error');
-                        return;
-                    }
-                    handleAIRequest(data);
-                    break;
+                    const data = await response.json();
+                    const aiResponse = data.choices[0].message.content;
 
-                default:
-                    debugLog(`Unknown message type: ${type}`);
+                    aiOutput.textContent = aiResponse;
+                    sendResponseToParent("aiResponse", aiResponse);
+
+                } catch (error) {
+                    console.error("Error calling OpenAI API:", error);
+                    aiOutput.textContent = `Failed to get AI response: ${error.message}`;
+                    aiOutput.classList.add('error-message');
+                    sendResponseToParent("aiResponse", null, error.message);
+                }
             }
         });
 
-        // Initialize the WebView
-        document.addEventListener('DOMContentLoaded', function() {
-            debugLog('AI WebView interface loaded and ready');
-            updateStatus('✅ WebView loaded and ready for communication', 'ready');
-            
-            // Send ready signal to parent if embedded
-            if (window.parent && window.parent !== window) {
-                setTimeout(() => {
-                    window.parent.postMessage({
-                        type: 'status',
-                        message: 'AI WebView ready for requests'
-                    }, '*');
-                }, 100);
-            }
-        });
-
-        // Handle errors globally
-        window.addEventListener('error', function(event) {
-            console.error('Global error:', event.error);
-            debugLog(`Global error: ${event.error.message}`);
-            updateStatus('❌ JavaScript error occurred', 'error');
-        });
-
-        window.addEventListener('unhandledrejection', function(event) {
-            console.error('Unhandled promise rejection:', event.reason);
-            debugLog(`Promise rejection: ${event.reason}`);
-            updateStatus('❌ Promise rejection occurred', 'error');
-        });
+        // Inform the UXP plugin that the webview is loaded and ready (optional)
+        // You could also do this via loadstop event in main.js
+        console.log("ai-webview.html loaded and ready.");
+        // window.parent.postMessage({ type: "webviewReady" }, '*'); // Example of sending ready signal
     </script>
 </body>
 </html>
