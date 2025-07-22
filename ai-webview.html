@@ -50,36 +50,39 @@
 
         // Function to send message back to UXP plugin
         function sendResponseToParent(type, data, error = null) {
-            // Using '*' as target origin for simplicity.
-            // In a real-world scenario, you might try to determine the UXP plugin's origin,
-            // but for a UXP plugin's internal webview, '*' is commonly used.
+            console.log("Webview: Sending message back to UXP parent.", { type, result: data, error });
+            // Using '*' as target origin is generally safe for webview -> UXP parent communication.
             window.parent.postMessage({ type, result: data, error }, '*');
         }
 
         // Listen for messages from the UXP plugin
         window.addEventListener('message', async (event) => {
-            console.log("Webview received message:", event.data);
+            console.log("Webview: Message received from UXP plugin.", event.data);
 
-            // Ensure the message comes from the expected origin (your UXP plugin)
-            // Note: UXP plugin origins are not standard HTTP/HTTPS.
-            // For internal webview communication, checking event.data.type is more common.
-            // if (event.origin !== "uxp://uxp/plugin/com.example.aiapp_webview") { // Example origin, not always reliable for postMessage
-            //    console.warn("Message from unexpected origin:", event.origin);
-            //    return;
-            // }
+            // Basic origin check (optional, but good practice if you can verify origin)
+            // UXP plugin origins are complex, so often '*' is used for webview -> UXP.
+            // For UXP -> webview, the target origin *must* match the webview's URL.
+            if (event.origin !== "https://mrcharlesbrown.github.io" && event.origin !== "null") { // 'null' can happen for local files or certain security contexts
+                 console.warn("Webview: Message from unexpected origin:", event.origin);
+                 // return; // Uncomment to strictly filter origins if you know exactly what they will be
+            }
 
             if (event.data && event.data.type === "promptRequest") {
                 const { prompt, apiKey } = event.data;
 
                 if (!prompt || !apiKey) {
-                    aiOutput.textContent = "Error: Prompt or API Key missing from plugin.";
-                    sendResponseToParent("aiResponse", null, "Prompt or API Key missing.");
+                    const errMsg = "Error: Prompt or API Key missing from plugin.";
+                    aiOutput.textContent = errMsg;
+                    aiOutput.classList.add('error-message');
+                    console.error("Webview:", errMsg);
+                    sendResponseToParent("aiResponse", null, errMsg);
                     return;
                 }
 
                 aiOutput.textContent = "Generating response... Please wait.";
                 aiOutput.classList.remove('error-message');
                 aiOutput.classList.remove('status-message');
+                console.log("Webview: Attempting to call OpenAI API with prompt:", prompt);
 
                 try {
                     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -95,19 +98,31 @@
                         })
                     });
 
+                    console.log("Webview: OpenAI API response status:", response.status, response.statusText);
+
                     if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorData.error.message || 'Unknown error'}`);
+                        let errorData = {};
+                        try {
+                            errorData = await response.json();
+                        } catch (e) {
+                            console.error("Webview: Could not parse error response as JSON:", e);
+                            errorData = { error: { message: "Unknown API error, response not JSON." } };
+                        }
+                        const apiErrorMsg = `API Error: ${response.status} ${response.statusText} - ${errorData.error ? errorData.error.message : 'No specific error message'}`;
+                        throw new Error(apiErrorMsg);
                     }
 
                     const data = await response.json();
+                    console.log("Webview: OpenAI API success data:", data);
+                    
                     const aiResponse = data.choices[0].message.content;
 
                     aiOutput.textContent = aiResponse;
+                    console.log("Webview: AI response received and displayed.");
                     sendResponseToParent("aiResponse", aiResponse);
 
                 } catch (error) {
-                    console.error("Error calling OpenAI API:", error);
+                    console.error("Webview: Error calling OpenAI API:", error.message);
                     aiOutput.textContent = `Failed to get AI response: ${error.message}`;
                     aiOutput.classList.add('error-message');
                     sendResponseToParent("aiResponse", null, error.message);
@@ -115,10 +130,12 @@
             }
         });
 
-        // Inform the UXP plugin that the webview is loaded and ready (optional)
-        // You could also do this via loadstop event in main.js
-        console.log("ai-webview.html loaded and ready.");
-        // window.parent.postMessage({ type: "webviewReady" }, '*'); // Example of sending ready signal
+        // Optional: Inform the UXP plugin that the webview is fully loaded
+        // This can be used as an alternative to `loadstop` event in UXP side.
+        // window.onload = () => {
+        //     console.log("ai-webview.html: Document fully loaded.");
+        //     sendResponseToParent("webviewLoaded", true);
+        // };
     </script>
 </body>
 </html>
